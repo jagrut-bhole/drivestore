@@ -1,6 +1,6 @@
 import type { FastifyReply } from "fastify";
 
-export class responseHandler {
+export class ResponseHandler {
   static sendSuccess<T>(
     reply: FastifyReply,
     statusCode: number,
@@ -30,7 +30,7 @@ export class responseHandler {
     });
   }
 
-  static ValidationError(
+  static sendValidationError(
     reply: FastifyReply,
     error: {
       format: () => unknown;

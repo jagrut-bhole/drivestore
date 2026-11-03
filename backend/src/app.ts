@@ -1,59 +1,62 @@
 import Fastify from "fastify";
 
 import cookie from "@fastify/cookie";
-import cors from "@fastify/cors";
-import helmet from "@fastify/helmet";
+import { corsPlugin } from "./plugins/cor.plugin";
+import { helmetPlugin } from "./plugins/helmet.plugin";
+import { rateLimitPlugin } from "./plugins/rate-limit.plugin";
+import { swaggerPlugin } from "./plugins/swagger.plugin";
 
-import { globalErrorHandler } from "./middleware/error.middleware";
+import { registerErrorHandler } from "./common/errors/errorHandler";
+import { env } from "./config/env";
 
-const fastify = Fastify({
-  logger: {
-    level: process.env.NODE_ENV === "production" ? "info" : "debug",
-    ...(process.env.NODE_ENV !== "production" && {
-      transport: {
-        target: "pino-pretty",
-        options: {
-          colorize: true,
-          translateTime: "HH:MM:ss",
-          ignore: "pid,hostname",
+export async function buildServer() {
+  const fastify = Fastify({
+    logger: {
+      level: process.env.NODE_ENV === "production" ? "info" : "debug",
+      ...(process.env.NODE_ENV !== "production" && {
+        transport: {
+          target: "pino-pretty",
+          options: {
+            colorize: true,
+            translateTime: "HH:MM:ss",
+            ignore: "pid,hostname",
+          },
         },
-      },
-    })
-  },
-});
-
-async function buildServer() {
-
-  // Cookie-Parser usage
-  fastify.register(cookie);
-  
-  // Helmet usage
-  fastify.register(helmet);
-  // CORS Configuration
-  await fastify.register(cors, {
-    origin: ["http:/localhost:5173"],
-    credentials: true,
-    maxAge: 600,
-    exposedHeaders: ["Content-Length"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "Cookie",
-      "x-requested-with",
-    ],
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      })
+    },
   });
 
+  // Cookie-Parser usage
+  await fastify.register(cookie);
+  
+  // Helmet usage
+  await helmetPlugin(fastify);
+  
+  // CORS Configuration
+  await corsPlugin(fastify);
+  
+  // Rate-Limit usage
+  await rateLimitPlugin(fastify);
+  
   // GLobal Error Handler
-  fastify.setErrorHandler(globalErrorHandler);
+  registerErrorHandler(fastify);
 
   // Not Found Handler
   fastify.setNotFoundHandler((request, reply) => {
     return reply.status(404).send({
       success: false,
       message: "Route Not Found!!",
+      error: {
+        code: "ROUTE_NOT_FOUND"
+      },
+      data: null
     });
   });
+
+  //Swagger Docs
+  if (env.NODE_ENV !== "production") {
+    await swaggerPlugin(fastify);
+  }
 
   //health check-up route
   fastify.get("/health", async (_request, _reply) => {
@@ -75,7 +78,3 @@ async function buildServer() {
 
   return fastify;
 }
-
-export {
-  buildServer
-};
