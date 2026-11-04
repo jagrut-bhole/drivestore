@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -13,10 +8,93 @@ datasource db {
 }
 
 model User {
-id String @id @default(cuid())
-email String @unique
-name String
-password String
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
+  id String @id @default(uuid()) @db.Uuid
+
+  name          String
+  email         String  @unique
+  emailVerified Boolean @default(false)
+
+  status UserStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts Account[]
+  session  Session[]
+
+  @@index([status])
+  @@map("users")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+model Account {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @db.Uuid
+
+  providerId        String @default("credential")
+  providerAccountId String
+
+  passwordHash String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId    String @db.Uuid
+  tokenHash String @unique
+
+  ipAddress String?
+  userAgent String?
+
+  expiresAt      DateTime
+  lastActivityAt DateTime @default(now())
+
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Verification {
+  id String @id @default(uuid()) @db.Uuid
+
+  identifier String
+  tokenHash  String           @unique
+  type       VerificationType
+
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([identifier, type])
+  @@index([expiresAt])
+  @@map("verifications")
+}
+
+enum VerificationType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
 }

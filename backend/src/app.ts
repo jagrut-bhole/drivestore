@@ -3,11 +3,15 @@ import Fastify from "fastify";
 import cookie from "@fastify/cookie";
 import { corsPlugin } from "./plugins/cor.plugin";
 import { helmetPlugin } from "./plugins/helmet.plugin";
-import { rateLimitPlugin } from "./plugins/rate-limit.plugin";
+import rateLimitPlugin from "./plugins/rate-limit.plugin";
 import { swaggerPlugin } from "./plugins/swagger.plugin";
 
 import { registerErrorHandler } from "./common/errors/errorHandler";
 import { env } from "./config/env";
+
+// Routes
+import authRoutes from "./modules/auth/auth.routes";
+import prismaPlugin from "./plugins/prisma.plugin";
 
 export async function buildServer() {
   const fastify = Fastify({
@@ -22,22 +26,25 @@ export async function buildServer() {
             ignore: "pid,hostname",
           },
         },
-      })
+      }),
     },
   });
 
+  // Prisma Plugin usage
+  await fastify.register(prismaPlugin);
+
   // Cookie-Parser usage
   await fastify.register(cookie);
-  
+
   // Helmet usage
   await helmetPlugin(fastify);
-  
+
   // CORS Configuration
   await corsPlugin(fastify);
-  
+
   // Rate-Limit usage
   await rateLimitPlugin(fastify);
-  
+
   // GLobal Error Handler
   registerErrorHandler(fastify);
 
@@ -47,9 +54,9 @@ export async function buildServer() {
       success: false,
       message: "Route Not Found!!",
       error: {
-        code: "ROUTE_NOT_FOUND"
+        code: "ROUTE_NOT_FOUND",
       },
-      data: null
+      data: null,
     });
   });
 
@@ -62,8 +69,8 @@ export async function buildServer() {
   fastify.get("/health", async (_request, _reply) => {
     return {
       status: "OK!!",
-      timestamp: new Date().toISOString()
-    }
+      timestamp: new Date().toISOString(),
+    };
   });
 
   //welcome route
@@ -72,8 +79,13 @@ export async function buildServer() {
       application: "DriveStore Backend Server",
       status: "operational",
       version: "1.0.0",
-      projectStatus: process.env.PROJECT_STATUS ?? null
-    }
+      projectStatus: process.env.PROJECT_STATUS ?? null,
+    };
+  });
+
+  // feature modules
+  await fastify.register(authRoutes, {
+    prefix: "/api/v1/auth",
   });
 
   return fastify;
