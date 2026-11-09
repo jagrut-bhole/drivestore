@@ -25,5 +25,3 @@ export const authApi = {
     })
   }
 }
-
-// https://chatgpt.com/s/t_6aeb80b238b08191b56892ccf6d0b608
