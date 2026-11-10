@@ -11,6 +11,7 @@ import { env } from "./config/env";
 
 // Routes
 import authRoutes from "./modules/auth/auth.routes";
+import healthRoutes from "./modules/health/health.routes";
 import prismaPlugin from "./plugins/prisma.plugin";
 
 export async function buildServer() {
@@ -86,6 +87,10 @@ export async function buildServer() {
   // feature modules
   await fastify.register(authRoutes, {
     prefix: "/api/v1/auth",
+  });
+
+  await fastify.register(healthRoutes, {
+    prefix: "/api/v1/health",
   });
 
   return fastify;

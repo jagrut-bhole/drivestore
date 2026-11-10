@@ -5,7 +5,7 @@ import {
   loginUserService,
   registerUserService,
   revokedAllSessionService,
-} from "./auth.services";
+} from "./auth.service";
 import { validateData } from "@/common/utils/validateData";
 import { clearSessionCookie, setSessionCookie } from "@/common/utils/cookie";
 import { AuthError } from "@/common/errors/AppError";
