@@ -1,5 +1,5 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
-import { loginSchema, registerSchema } from "./auth.schema";
+import { loginInputSchema, registerInputSchema } from "./auth.schema";
 import { ResponseHandler } from "@/common/utils/responseHandler";
 import {
   loginUserService,
@@ -19,7 +19,7 @@ export async function registerController(
 ) {
   const body = request.body;
 
-  const data = validateData(registerSchema, body, reply);
+  const data = validateData(registerInputSchema, body, reply);
 
   if (!data) return;
 
@@ -65,7 +65,7 @@ export async function loginController(
 ) {
   const body = request.body;
 
-  const data = validateData(loginSchema, body, reply);
+  const data = validateData(loginInputSchema, body, reply);
 
   if (!data) return;
 
@@ -121,15 +121,21 @@ export async function logoutAllController(
   request: FastifyRequest,
   reply: FastifyReply,
 ) {
-  const userId = request.auth?.id;
+  try {
+    const userId = request.auth?.id;
 
-  if (!userId) {
-    return ResponseHandler.sendError(reply, 401, "Invalid Access!!");
+    if (!userId) {
+      return ResponseHandler.sendError(reply, 401, "Invalid Access!!");
+    }
+
+    await revokedAllSessionService(userId);
+
+    clearSessionCookie(reply);
+
+    return ResponseHandler.sendSuccess(reply, 200, "All devices logout successfully!!");
+  } catch (error: unknown) {
+    request.log.error(error);
+
+    return ResponseHandler.sendError(reply, 500, "Failed to logout from all devices");
   }
-
-  await revokedAllSessionService(userId);
-
-  clearSessionCookie(reply);
-
-  return ResponseHandler.sendSuccess(reply, 200, "All devices logout successfully!!");
 }

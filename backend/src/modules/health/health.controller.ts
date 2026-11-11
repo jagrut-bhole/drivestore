@@ -22,14 +22,15 @@ export async function getReadiness(
 
   const isHealthy = health.status === "healthy";
 
-  return ResponseHandler.sendSuccess(
-    reply,
-    isHealthy ? 200 : 503,
-    isHealthy
-      ? "Healthy Server!!"
-      : "There seems somethingh problem with the server!!",
-    health,
-  );
+  if (!isHealthy) {
+    return ResponseHandler.sendError(
+      reply,
+      503,
+      "There seems to be a problem with the server!",
+    );
+  }
+
+  return ResponseHandler.sendSuccess(reply, 200, "Healthy server!", health);
 }
 
 export async function getHealth(request: FastifyRequest, reply: FastifyReply) {
@@ -44,3 +45,5 @@ export async function getHealth(request: FastifyRequest, reply: FastifyReply) {
     health,
   );
 }
+
+// https://chatgpt.com/s/t_6af36bee1e008191abc564dafc3a1b9b

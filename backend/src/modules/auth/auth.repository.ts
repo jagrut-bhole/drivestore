@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { CreateUserData } from "./auth.types";
+
 export async function createUserWithCredential(data: CreateUserData) {
   return prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
@@ -29,6 +30,7 @@ export async function createUserWithCredential(data: CreateUserData) {
     return user;
   });
 }
+
 export async function findCredentialsAccount(email: string) {
   return await prisma.user.findUnique({
     where: {
@@ -43,7 +45,7 @@ export async function findCredentialsAccount(email: string) {
 
       accounts: {
         where: {
-          providerId: "credential",
+          providerId: "credentials",
         },
         select: {
           id: true,

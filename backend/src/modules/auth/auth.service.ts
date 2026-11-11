@@ -1,4 +1,4 @@
-import { hashPassword } from "@/common/utils/password";
+import { hashPassword, verifyPassword } from "@/common/utils/password";
 import {
   createUserWithCredential,
   findCredentialsAccount,
@@ -39,14 +39,25 @@ export async function loginUserService(
   context: AuthContext,
 ) {
   const user = await findCredentialsAccount(input.email);
+  console.log("User: ", user);
 
-  if (!user || !user.accounts[0]?.passwordHash) {
+  const account = user?.accounts[0];
+  if (!user || !account?.passwordHash) {
     throw new AuthError("Invalid email or password", 401);
   }
 
   if (user.status !== "ACTIVE") {
     throw new AuthError("Your account is currently unavailable", 403);
   }
+
+  const isPasswordValid = await verifyPassword(input.password, account.passwordHash);
+
+  console.log("Password Valid: ", isPasswordValid);
+  
+  if (!isPasswordValid) {
+    throw new AuthError("Invalid email or password", 401);
+  }
+  
   const { session, token } = await createSession({
     userId: user.id,
     ipAddress: context.ipAddress,
