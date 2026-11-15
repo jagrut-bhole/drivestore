@@ -1,13 +1,7 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { loginInputSchema, registerInputSchema } from "./auth.schema";
 import { ResponseHandler } from "@/common/utils/responseHandler";
-import {
-  loginUserService,
-  refreshTokenService,
-  registerUserService,
-  revokedAllSessionService,
-  revokedCurrentSession,
-} from "./auth.service";
+import { authService } from "./auth.service";
 import { validateData } from "@/common/utils/validateData";
 import { clearSessionCookie, setSessionCookie } from "@/common/utils/cookie";
 import { AuthError } from "@/common/errors/AppError";
@@ -25,7 +19,7 @@ export async function registerController(
   if (!data) return;
 
   try {
-    const result = await registerUserService(data, {
+    const result = await authService.registerUser(data, {
       ipAddress: request.ip,
       userAgent: request.headers["user-agent"],
     });
@@ -76,7 +70,7 @@ export async function loginController(
   if (!data) return;
 
   try {
-    const result = await loginUserService(data, {
+    const result = await authService.loginUser(data, {
       ipAddress: request.ip,
       userAgent: request.headers["user-agent"],
     });
@@ -108,7 +102,7 @@ export async function logoutController(
     if (token) {
       const tokenHash = hashToken(token);
 
-      await revokedCurrentSession(tokenHash);
+      await authService.revokedCurrentSession(tokenHash);
 
       clearSessionCookie(reply);
 
@@ -138,7 +132,7 @@ export async function logoutAllController(
       return ResponseHandler.sendError(reply, 401, "Invalid Access!!");
     }
 
-    await revokedAllSessionService(userId);
+    await authService.revokedAllSession(userId);
 
     clearSessionCookie(reply);
 
@@ -174,7 +168,7 @@ export async function refreshToken(
 
   try {
     const { sessionCheck, sessionExpiry, newToken } =
-      await refreshTokenService(currentToken);
+      await authService.refreshToken(currentToken);
 
     setSessionCookie(reply, newToken);
 

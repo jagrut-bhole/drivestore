@@ -1,8 +1,9 @@
-import { getUserDetailsById, userRepository } from "./users.repository";
+import { userRepository } from "./users.repository";
 import type { UpdateProfileInput } from "./users.schema";
 
+//temporary service!!
 export async function userPofile(userId: string) {
-  return await getUserDetailsById(userId);
+  return await userRepository.getUserDetailsById(userId);
 }
 
 export const userService = {
@@ -28,9 +29,6 @@ export const userService = {
         : {}),
     };
 
-    return userRepository.updateProfile(
-      userId,
-      updateData
-    )
+    return userRepository.updateProfile(userId, updateData);
   },
 };
