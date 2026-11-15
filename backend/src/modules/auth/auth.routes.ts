@@ -98,7 +98,7 @@ const authRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         response: {
           200: successResponse({
             type: "object",
-            properties: null,
+            properties: {},
           }),
 
           400: errorResponse({
@@ -132,7 +132,7 @@ const authRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         response: {
           200: successResponse({
             type: "object",
-            properties: null,
+            properties: {},
           }),
 
           400: errorResponse({
