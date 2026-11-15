@@ -1,20 +1,18 @@
 import Fastify from "fastify";
 
 import cookie from "@fastify/cookie";
+
 import { corsPlugin } from "./plugins/cor.plugin";
 import { helmetPlugin } from "./plugins/helmet.plugin";
 import rateLimitPlugin from "./plugins/rate-limit.plugin";
+import prismaPlugin from "./plugins/prisma.plugin";
 
 import { registerSwagger } from "./common/swagger/swagger";
-
 import { registerErrorHandler } from "./common/errors/errorHandler";
 import { env } from "./config/env";
 
-// Routes
-import authRoutes from "./modules/auth/auth.routes";
-import healthRoutes from "./modules/health/health.routes";
-import userRoutes from "./modules/users/users.routes";
-import prismaPlugin from "./plugins/prisma.plugin";
+import { apiV1Module } from "./modules/api-v1/api-v1.module";
+import { API_BASE_URL } from "./common/constants/api.constants";
 
 export async function buildServer() {
   const fastify = Fastify({
@@ -34,13 +32,15 @@ export async function buildServer() {
   });
 
   //Log every incoming request
-  fastify.addHook('onRequest', async (request, reply) => {
-    console.log('Incoming Request:');
-    console.log('Method:', request.method);
-    console.log('URL:', request.url);
-    console.log('Hostname:', request.hostname);
-    console.log('Protocol:', request.protocol);
-    console.log(`Final URL: ${request.protocol}/${request.hostname}/${request.url}`);
+  fastify.addHook("onRequest", async (request, reply) => {
+    console.log("Incoming Request:");
+    console.log("Method:", request.method);
+    console.log("URL:", request.url);
+    console.log("Hostname:", request.hostname);
+    console.log("Protocol:", request.protocol);
+    console.log(
+      `Final URL: ${request.protocol}/${request.hostname}/${request.url}`,
+    );
   });
 
   // Swagger Docs
@@ -96,18 +96,10 @@ export async function buildServer() {
     };
   });
 
-  // feature modules
-  await fastify.register(authRoutes, {
-    prefix: "/api/v1/auth",
+  // feature modules using api-v1 Module
+  await fastify.register(apiV1Module, {
+    prefix: `${API_BASE_URL}`,
   });
-
-  await fastify.register(healthRoutes, {
-    prefix: "/api/v1/health",
-  });
-
-  await fastify.register(userRoutes, {
-    prefix: "/api/v1/user"
-  })
 
   return fastify;
 }

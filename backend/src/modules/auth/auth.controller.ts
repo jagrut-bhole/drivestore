@@ -3,15 +3,16 @@ import { loginInputSchema, registerInputSchema } from "./auth.schema";
 import { ResponseHandler } from "@/common/utils/responseHandler";
 import {
   loginUserService,
+  refreshTokenService,
   registerUserService,
   revokedAllSessionService,
+  revokedCurrentSession,
 } from "./auth.service";
 import { validateData } from "@/common/utils/validateData";
 import { clearSessionCookie, setSessionCookie } from "@/common/utils/cookie";
 import { AuthError } from "@/common/errors/AppError";
-import { SESSION_COOKIE_NAME } from "@/common/constants/auth.constants";
+import { SESSION_COOKIE_NAME } from "./auth.constants";
 import { hashToken } from "@/common/utils/crypto";
-import { revokedSession } from "./auth.repository";
 
 export async function registerController(
   request: FastifyRequest,
@@ -31,10 +32,15 @@ export async function registerController(
 
     setSessionCookie(reply, result.token);
 
-    return ResponseHandler.sendSuccess(reply, 201, "Account created successfully!!", {
-      user: result.user,
-      session: result.session,
-    });
+    return ResponseHandler.sendSuccess(
+      reply,
+      201,
+      "Account created successfully!!",
+      {
+        user: result.user,
+        session: result.session,
+      },
+    );
   } catch (error: unknown) {
     request.log.error(error);
 
@@ -102,11 +108,15 @@ export async function logoutController(
     if (token) {
       const tokenHash = hashToken(token);
 
-      await revokedSession(tokenHash);
+      await revokedCurrentSession(tokenHash);
 
       clearSessionCookie(reply);
 
-      return ResponseHandler.sendSuccess(reply, 200, "Logged out successfull!!");
+      return ResponseHandler.sendSuccess(
+        reply,
+        200,
+        "Logged out successfull!!",
+      );
     }
 
     return ResponseHandler.sendError(reply, 401, "No active session found");
@@ -132,10 +142,56 @@ export async function logoutAllController(
 
     clearSessionCookie(reply);
 
-    return ResponseHandler.sendSuccess(reply, 200, "All devices logout successfully!!");
+    return ResponseHandler.sendSuccess(
+      reply,
+      200,
+      "All devices logout successfully!!",
+    );
   } catch (error: unknown) {
     request.log.error(error);
 
-    return ResponseHandler.sendError(reply, 500, "Failed to logout from all devices");
+    return ResponseHandler.sendError(
+      reply,
+      500,
+      "Failed to logout from all devices",
+    );
+  }
+}
+
+export async function refreshToken(
+  request: FastifyRequest,
+  reply: FastifyReply,
+) {
+  const authHeader = request.headers.authorization;
+
+  const currentToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : null;
+
+  if (!currentToken) {
+    return ResponseHandler.sendError(reply, 401, "Session token is required!!");
+  }
+
+  try {
+    const { sessionCheck, sessionExpiry, newToken } =
+      await refreshTokenService(currentToken);
+
+    setSessionCookie(reply, newToken);
+
+    return ResponseHandler.sendSuccess(
+      reply,
+      200,
+      "Session Refreshed Successfully!!",
+      {
+        token: newToken,
+        session: {
+          id: sessionCheck.id,
+          userId: sessionCheck.userId,
+          expiresAt: sessionExpiry,
+        },
+      },
+    );
+  } catch (error) {
+    return ResponseHandler.sendError(reply, 400, "Unable to Update token!!");
   }
 }

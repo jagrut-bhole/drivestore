@@ -1,5 +1,5 @@
 import { generateToken, hashToken } from "@/common/utils/crypto";
-import { SESSION_DURATION } from "@/common/constants/auth.constants";
+import { SESSION_DURATION } from "../auth/auth.constants";
 import type { CreateSessionInput } from "./session.types";
 import { createSessionForUser } from "./session.repository";
 
