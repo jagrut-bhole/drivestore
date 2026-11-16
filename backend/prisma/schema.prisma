@@ -109,8 +109,8 @@ model ApiKeys {
   userId String @db.Uuid
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  bucketId String  @db.Uuid
-  bucket   Bucket? @relation(fields: [bucketId], references: [id], onDelete: Cascade)
+  bucketId String?  @db.Uuid
+  bucket   Bucket? @relation(fields: [bucketId], references: [id], onDelete: SetNull)
 
   name      String
   keyPrefix String @unique
@@ -120,11 +120,15 @@ model ApiKeys {
 
   isActive   Boolean   @default(true)
   lastUsedAt DateTime?
+  revokedAt DateTime?
+  expiresAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+  @@index([bucketId])
+  @@index([expiresAt])
   @@map("apiKeys")
 }
 
