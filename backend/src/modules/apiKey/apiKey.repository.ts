@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { createInputApiKey } from "./apiKey.types";
+import type { UpdateApiKeyInput } from "./apiKey.types";
 
 export const apiKeyRepositery = {
   countActiveKeys: async (userId: string) => {
@@ -56,10 +57,11 @@ export const apiKeyRepositery = {
     });
   },
 
-  getApiKey: async (userId: string) => {
+  getAllApiKey: async (userId: string) => {
     return prisma.apiKeys.findMany({
       where: {
         userId,
+        revokedAt: null
       },
       select: {
         id: true,
@@ -80,6 +82,113 @@ export const apiKeyRepositery = {
             },
           },
         },
+      },
+    });
+  },
+
+  getApiDetailsById: async (userId: string, id: string) => {
+    return await prisma.apiKeys.findUnique({
+      where: {
+        userId,
+        id,
+      },
+      select: {
+        id: true,
+        keyPrefix: true,
+        keyHash: true,
+        updatedAt: true,
+        createdAt: true,
+      },
+    });
+  },
+
+  updateApiKey: async (data: {
+    userId: string;
+    apiId: string;
+    keyPrefix: string;
+    keyHash: string;
+  }) => {
+    return prisma.apiKeys.update({
+      where: {
+        id: data.apiId,
+        userId: data.userId,
+      },
+      data: {
+        keyPrefix: data.keyPrefix,
+        keyHash: data.keyHash,
+      },
+    });
+  },
+
+  deleteApiKey: async (data: { userId: string; apiId: string }) => {
+    return prisma.apiKeys.updateMany({
+      where: {
+        id: data.apiId,
+        userId: data.userId,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+  },
+
+  detailedApiInfo: async (data: { userId: string; apiId: string }) => {
+    return await prisma.apiKeys.findFirst({
+      where: {
+        id: data.apiId,
+        userId: data.userId,
+        revokedAt: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        keyPrefix: true,
+        expiresAt: true,
+        permissions: true,
+        createdAt: true,
+        bucket: {
+          select: {
+            id: true,
+            name: true,
+            driveFolderId: true,
+            driveAccount: {
+              select: {
+                id: true,
+                googleEmail: true,
+                status: true,
+                quotaTotal: true,
+                quotaused: true,
+                lastCheckedAt: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  },
+
+  updateApiKeyInfo: async (
+    userId: string,
+    apiId: string,
+    data: UpdateApiKeyInput,
+  ) => {
+    return await prisma.apiKeys.update({
+      where: {
+        id: apiId,
+        userId: userId,
+        revokedAt: null,
+      },
+      data,
+      select: {
+        id: true,
+        name: true,
+        permissions: true,
+        isActive: true,
+        lastUsedAt: true,
+        expiresAt: true,
+        keyPrefix: true,
+        createdAt: true,
       },
     });
   },

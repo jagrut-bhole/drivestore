@@ -1,6 +1,3 @@
-
-import type { FastifySchema } from "fastify";
-
 type JsonSchema = Record<string, any>;
 
 export function successResponse(
