@@ -1,38 +1,19 @@
-import "dotenv/config";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../generated/prisma/client";
-import { Pool } from "pg";
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+import fp from "fastify-plugin";
+import { prisma } from "@/lib/prisma";
+import type { FastifyInstance } from "fastify";
 
-if (!globalForPrisma.prisma) {
-  const connectionString = `${process.env.DATABASE_URL}`;
+const prismaPlugin = fp(async (app: FastifyInstance) => {
 
-  if (!connectionString) {
-    throw new Error("DATABASE_URL env variable is not set");
-  }
+  await prisma.$connect();
 
-  const pool = new Pool({
-    connectionString,
+  app.decorate("prisma", prisma);
+
+  app.addHook("onClose", async () => {
+    await prisma.$disconnect();
   });
+}, {
+  name: "prisma-plugin",
+});
 
-  const adapter = new PrismaPg(pool);
-
-  globalForPrisma.prisma = new PrismaClient({
-    adapter,
-    log:
-      process.env.NODE_ENV === "development"
-        ? ["query", "error", "warn"]
-        : ["error"],
-  });
-}
-
-const prisma = globalForPrisma.prisma;
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
-
-export { prisma };
+export default prismaPlugin;
