@@ -11,15 +11,18 @@ const startServer = async () => {
   try {
     await server.listen({
       port: PORT,
-      host: HOST
+      host: HOST,
     });
 
-    server.log.info(`DriveStore backend running on port http://localhost:${PORT}`);
+    server.log.info(
+      `DriveStore backend running on port http://localhost:${PORT}`,
+    );
+    server.log.info(`Swagger: https://localhost:${PORT}/documentation`);
   } catch (error) {
     server.log.error(error);
     await server.close();
     process.exit(1);
   }
-}
+};
 
-startServer(); 
+startServer();

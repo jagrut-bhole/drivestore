@@ -1,7 +1,9 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  NODE_ENV: z
+    .enum(["development", "production", "test"])
+    .default("development"),
 
   PORT: z.coerce.number().default(6969),
 
@@ -9,7 +11,11 @@ const envSchema = z.object({
 
   JWT_SECRET: z.string().min(32),
 
-  CLIENT_URL: z.string()
+  CLIENT_URL: z.string(),
+
+  RESEND_API_KEY: z.string(),
+
+  RESEND_FROM_EMAIL: z.string(),
 });
 
 export const env = envSchema.parse(process.env);
