@@ -103,3 +103,4 @@ export async function buildServer() {
 
   return fastify;
 }
+// https://chatgpt.com/s/t_6b033da5a03481919fea555b8237669b

@@ -15,7 +15,7 @@ export async function createApiKey(
   const userId = request.auth?.id;
 
   if (!userId) {
-    return ResponseHandler.sendError(reply, 404, "USER_ID missing!!");
+    return ResponseHandler.sendError(reply, 401, "Unauthorized");
   }
 
   const data = validateData(createApiKeySchema, request.body, reply);

@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { createInputApiKey } from "./apiKey.types";
-import type { UpdateApiKeyInput } from "./apiKey.types";
+import type { createInputApiKey, UpdateApiKeyInput } from "./apiKey.types";
 
 export const apiKeyRepositery = {
   countActiveKeys: async (userId: string) => {
@@ -158,7 +157,7 @@ export const apiKeyRepositery = {
                 googleEmail: true,
                 status: true,
                 quotaTotal: true,
-                quotaused: true,
+                quotaUsed: true,
                 lastCheckedAt: true,
               },
             },

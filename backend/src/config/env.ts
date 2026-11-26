@@ -16,6 +16,16 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string(),
 
   RESEND_FROM_EMAIL: z.string(),
+
+  G_DRIVE_CLIENT_ID: z.string(),
+
+  G_DRIVE_CLIENT_SECRET: z.string(),
+
+  G_DRIVE_REDIRECT_URI: z.string(),
+
+  G_DRIVE_OAUTH_STATE_SECRET: z.string(),
+
+  TOKEN_ENC_KEY: z.string(),
 });
 
 export const env = envSchema.parse(process.env);

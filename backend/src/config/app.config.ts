@@ -13,3 +13,9 @@ export const appConfig = {
 export const resendMailConfig = {
   fromEmail: env.RESEND_FROM_EMAIL
 }
+
+export const googleConfig = {
+  googleClientId: env.G_DRIVE_CLIENT_ID,
+  googleClientSecret: env.G_DRIVE_CLIENT_SECRET,
+  googleDriveCallbackUrl: env.G_DRIVE_REDIRECT_URI
+}
