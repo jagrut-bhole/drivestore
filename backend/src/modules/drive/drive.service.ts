@@ -9,7 +9,7 @@ import {
 import type { DriveCallbackInput } from "./drive.types";
 import { env } from "@/config/env";
 import { google } from "googleapis";
-import { UserStatus } from "@/generated/prisma/enums";
+import { DriveAccountStatus, UserStatus } from "@/generated/prisma/enums";
 
 export const driveService = {
   driveConnection: async (userId: string) => {
@@ -28,6 +28,7 @@ export const driveService = {
       return authorizationUrl;
     }
   },
+
   driveCallback: async (data: DriveCallbackInput) => {
     const state = verifyState(data.state);
 
@@ -114,7 +115,7 @@ export const driveService = {
 
         quotaUsed,
         quotaTotal,
-        
+
         status: UserStatus.ACTIVE,
       });
     } catch (error) {
@@ -122,5 +123,122 @@ export const driveService = {
         cause: error,
       });
     }
+  },
+
+  getDriveAccount: async (userId: string, driveId: string) => {
+    const account = await driveRepositery.findOwnedDriveAccount(
+      userId,
+      driveId,
+    );
+
+    if (!account || account.status === DriveAccountStatus.DISCONNECT) {
+      return {
+        connected: false,
+        account: false,
+        quota: null,
+      };
+    }
+
+    let quotaTotal = account.quotaTotal;
+    let quotaUsed = account.quotaUsed;
+    let lastCheckedAt = account.lastCheckedAt;
+
+    const shouldRefresh =
+      !lastCheckedAt || Date.now() - lastCheckedAt.getTime() > 5 * 60 * 1000;
+
+    if (
+      account.status === DriveAccountStatus.ACTIVE &&
+      account.refreshTokenEnc &&
+      shouldRefresh
+    ) {
+      try {
+        const client = makeOAuthCLient();
+
+        client.setCredentials({
+          refresh_token: googleDecrypt(account.refreshTokenEnc!),
+        });
+
+        const drive = google.drive({
+          version: "v3",
+          auth: client,
+        });
+
+        const { data } = await drive.about.get({
+          fields: "storageQuota",
+        });
+
+        const storageQuota = data.storageQuota;
+
+        quotaUsed = storageQuota?.usage ? BigInt(storageQuota.usage) : null;
+
+        quotaTotal = storageQuota?.limit ? BigInt(storageQuota.limit) : null;
+
+        lastCheckedAt = new Date();
+
+        await driveRepositery.updateDriveQuota({
+          userId,
+          driveId,
+          quotaTotal,
+          quotaUsed,
+          lastCheckedAt,
+        });
+      } catch (error) {
+        console.log("Error:: ", error);
+      }
+    }
+
+    const used = quotaUsed ?? 0n;
+
+    const remaining =
+      quotaTotal !== null ? (quotaTotal > used ? quotaTotal - used : 0n) : null;
+
+    const percentage =
+      quotaTotal && quotaTotal > 0n
+        ? Number((used * 10000n) / quotaTotal) / 100
+        : null;
+
+    return {
+      connected: true,
+      account: {
+        id: account.id,
+        email: account.googleEmail,
+        status: account.status,
+        createdAt: account.createdAt,
+      },
+      quota: {
+        total: quotaTotal?.toString() ?? null,
+        used: quotaUsed?.toString() ?? null,
+        remaining: remaining?.toString() ?? null,
+        percentage,
+        lastCheckedAt,
+      },
+    };
+  },
+
+  disconnectDriveAccount: async (userId: string, driveId: string) => {
+    const account = await driveRepositery.findOwnedDriveAccount(
+      userId,
+      driveId,
+    );
+    
+    if (!account || account.status === DriveAccountStatus.DISCONNECT) {
+      throw new Error("DRIVE_ACCOUNT_NOT_FOUND");
+    }
+
+    if (account.refreshTokenEnc) {
+      try {
+        const client = makeOAuthCLient();
+
+        await client.revokeToken(googleDecrypt(account.refreshTokenEnc));
+      } catch (error) {
+        console.log("Error: ", error);
+      }
+    }
+
+    await driveRepositery.disconnectDriveAccount(userId, driveId);
+
+    return {
+      disconnected: true,
+    };
   },
 };

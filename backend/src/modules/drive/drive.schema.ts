@@ -19,3 +19,7 @@ export const driveDetailsUpsertSchema = z.object({
   quotaTotal: z.bigint().nullable(),
   status: z.enum(DriveAccountStatus),
 });
+
+export const driveIdParamsSchema = z.object({
+  driveId: z.uuid(),
+});

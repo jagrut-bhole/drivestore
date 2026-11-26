@@ -234,7 +234,7 @@ model DriveAccount {
   googleSub   String // Google's stable user id
   googleEmail String
 
-  refreshTokenEnc String
+  refreshTokenEnc String?
   scopes          String[]
   status          DriveAccountStatus @default(ACTIVE)
   rootFolderId    String? // DriveFolders folder from user Drives
