@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -13,10 +8,253 @@ datasource db {
 }
 
 model User {
-id String @id @default(cuid())
-email String @unique
-name String
-password String
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
+  id String @id @default(uuid()) @db.Uuid
+
+  name          String
+  email         String  @unique
+  emailVerified Boolean @default(false)
+
+  status UserStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts Account[]
+  session  Session[]
+
+  apiKeys       ApiKeys[]
+  bucket        Bucket[]
+  driveAccounts DriveAccount[]
+
+  @@index([status])
+  @@map("users")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+model Account {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @db.Uuid
+
+  providerId        String @default("credential")
+  providerAccountId String
+
+  passwordHash String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId    String @db.Uuid
+  tokenHash String @unique
+
+  ipAddress String?
+  userAgent String?
+
+  expiresAt      DateTime
+  lastActivityAt DateTime @default(now())
+
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Verification {
+  id String @id @default(uuid()) @db.Uuid
+
+  identifier String
+  tokenHash  String           @unique
+  type       VerificationType
+
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([identifier, type])
+  @@index([expiresAt])
+  @@map("verifications")
+}
+
+enum VerificationType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+model ApiKeys {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  bucketId String?  @db.Uuid
+  bucket   Bucket? @relation(fields: [bucketId], references: [id], onDelete: SetNull)
+
+  name      String
+  keyPrefix String @unique
+  keyHash   String @unique
+
+  permissions ApiKeyPermission[]
+
+  isActive   Boolean   @default(true)
+  lastUsedAt DateTime?
+  revokedAt DateTime?
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([bucketId])
+  @@index([expiresAt])
+  @@map("apiKeys")
+}
+
+enum ApiKeyPermission {
+  READ
+  WRITE
+  DELETE
+}
+
+model Bucket {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  driveAccountId String       @db.Uuid
+  driveAccount   DriveAccount @relation(fields: [driveAccountId], references: [id])
+
+  name          String
+  driveFolderId String
+  createdAt     DateTime @default(now())
+
+  objects StoredObject[]
+  apiKeys ApiKeys[]
+
+  @@unique([userId, name])
+}
+
+model StoredObject {
+  id String @id @default(uuid()) @db.Uuid
+
+  bucketId String @db.Uuid
+  bucket   Bucket @relation(fields: [bucketId], references: [id], onDelete: Cascade)
+
+  key         String
+  size        BigInt       @default(0)
+  contentType String
+  md5         String
+  status      ObjectStatus @default(PENDING)
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chunks ObjectChunk[]
+  upload UploadSession?
+
+  @@unique([bucketId, key])
+  @@map("storedObject")
+}
+
+enum ObjectStatus {
+  PENDING
+  UPLOADING
+  COMPLETE
+  FAILED
+  MISSING
+  DELETED
+}
+
+model ObjectChunk {
+  id             String       @id @default(cuid())
+  
+  objectId       String       @db.Uuid
+  object         StoredObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  
+  index          Int // MVP: always 0
+  
+  driveAccountId String @db.Uuid
+  driveAccount   DriveAccount @relation(fields: [driveAccountId], references: [id])
+  
+  driveFileId    String
+  size           BigInt
+  md5            String?
+  status         ChunkStatus  @default(PENDING)
+
+  @@unique([objectId, index])
+  @@index([driveFileId])
+}
+
+enum ChunkStatus {
+  PENDING
+  STORED
+  MISSING
+}
+
+model UploadSession {
+  id              String       @id @default(cuid())
+  objectId        String       @unique @db.Uuid
+  object          StoredObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  driveSessionUri String // acts like a secret, treat carefully
+  bytesUploaded   BigInt       @default(0)
+  expiresAt       DateTime
+  createdAt       DateTime     @default(now())
+}
+
+model DriveAccount {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  googleSub   String // Google's stable user id
+  googleEmail String
+
+  refreshTokenEnc String?
+  scopes          String[]
+  status          DriveAccountStatus @default(ACTIVE)
+  rootFolderId    String? // DriveFolders folder from user Drives
+  quotaTotal      BigInt?
+  quotaUsed       BigInt?
+  lastCheckedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  buckets Bucket[]
+  chunks  ObjectChunk[]
+
+  @@unique([userId, googleSub])
+  @@index([userId])
+  @@map("driveAccounts")
+}
+
+enum DriveAccountStatus {
+  ACTIVE
+  NEEDS_RECONNECT
+  DISCONNECT
 }
